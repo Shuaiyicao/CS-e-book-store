@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>smo</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="svm-串讲">SVM 串讲</h1>
+
+<blockquote>
+  <p><strong>Outline:</strong></p>
+  
+  <ul>
+  <li>About SVM</li>
+  <li>Functional margin and Geometrical margin</li>
+  <li>Support Vector</li>
+  <li>Kernel</li>
+  <li>Deal with Outliers</li>
+  <li>SMO</li>
+  </ul>
+</blockquote>
+
+
+
+<h2 id="about-svm">About SVM</h2>
+
+<ul>
+<li>SVM(Support Vector Machine) 包括SVC(Support Vector Classifier) 和SVR(Support Vector Regressor), 是目前公认的效果最好的分类算法之一。</li>
+<li>当作为一种二类分类模型，其基本模型定义为特征空间上的间隔最大的线性分类器，其学习策略便是间隔最大化，最终可转化为一个凸二次规划问题的求解。</li>
+<li>通过引入核函数(kernel fuction), 将低维空间映射到高维空间，从而解决非线性可分的分类问题。</li>
+</ul>
+
+
+
+<h2 id="functional-margin-and-geometrical-margin">Functional margin and Geometrical margin </h2>
+
+<p>考虑一个线性二分类问题，对于<script id="MathJax-Element-1" type="math/tex">n</script>维数据点向量<script id="MathJax-Element-2" type="math/tex">x</script>, 类别用＋1和－1表示，目标是找到一个超平面：</p>
+
+
+
+<p><script id="MathJax-Element-3" type="math/tex; mode=display">\begin{align}
+w^{T}x+b=0
+\end{align}</script> <br>
+ 令<script id="MathJax-Element-4" type="math/tex">f(x)=w^{T}x+b</script>，对于在超平面上的点<script id="MathJax-Element-5" type="math/tex">f(x)=0</script>, <script id="MathJax-Element-6" type="math/tex">f(x)>0</script>对应<script id="MathJax-Element-7" type="math/tex">y=1</script>的数据点，<script id="MathJax-Element-8" type="math/tex">f(x)<0</script>对应<script id="MathJax-Element-9" type="math/tex">y=-1</script>的数据点。</p>
+
+<p><img src="http://blog.pluskid.org/wp-content/uploads/2010/09/Hyper-Plane.png" alt="enter image description here" title="hyper plan"> <br>
+注意到当分类正确时，<script id="MathJax-Element-10" type="math/tex">yf(x)>0</script>, 引入函数距离(functional margin)的定义 <br>
+<script id="MathJax-Element-11" type="math/tex; mode=display">\begin{align}
+\hat{\gamma}=y(w^Tx+b)=yf(x)
+\end{align}</script> <br>
+超平面<script id="MathJax-Element-12" type="math/tex">w^{T}x+b=0</script>关于所有样本点的函数间隔最小值，就是超平面<script id="MathJax-Element-13" type="math/tex">w^{T}x+b=0</script>关于训练数据集的函数间隔 <br>
+<script id="MathJax-Element-14" type="math/tex; mode=display">\begin{align}
+\hat{\gamma}=\min\hat{\gamma}_i,\quad i=1,\ldots,n
+\end{align}</script> <br>
+等比例地改变<script id="MathJax-Element-15" type="math/tex">w</script>和<script id="MathJax-Element-16" type="math/tex">b</script>, 超平面不变，但是函数距离等比例缩放，这显然不合适，因此引入几何间隔(geometrical margin) <br>
+<script id="MathJax-Element-17" type="math/tex; mode=display">\begin{align}
+\tilde{\gamma}=\frac{\hat{\gamma}}{\|w\|}
+\end{align}</script> <br>
+几何间隔就是函数间隔除以<script id="MathJax-Element-18" type="math/tex">\|w\|</script>。所以缩放 <script id="MathJax-Element-19" type="math/tex">w</script> 和 <script id="MathJax-Element-20" type="math/tex">b</script> 的时候 <script id="MathJax-Element-21" type="math/tex">\tilde{\gamma}</script> 的值是不会改变的，它只随着超平面的变动而变动，因此，这是更加合适的一个间隔度量。使几何距离最大化，可以得到分类置信度(confidence)最大的超平面,目标函数定义为 <br>
+<script id="MathJax-Element-22" type="math/tex; mode=display">\begin{align}
+\max\tilde{\gamma}
+\end{align}
+</script><script id="MathJax-Element-23" type="math/tex; mode=display">\begin{align}
+s.t. \quad y_i(w^{T}x_i+b)=\hat{\gamma}_i\geq\hat{\gamma},\quad i=1,\ldots,n
+\end{align}</script> <br>
+由于<script id="MathJax-Element-24" type="math/tex">\hat{\gamma}</script>随着<script id="MathJax-Element-25" type="math/tex">w</script>和<script id="MathJax-Element-26" type="math/tex">b</script>等比例缩放，如果我们固定<script id="MathJax-Element-27" type="math/tex">\hat{\gamma}=1</script>, <script id="MathJax-Element-28" type="math/tex">\tilde{\gamma}=\frac{1}{\|w\|}</script>, 优化问题变成 <br>
+<script id="MathJax-Element-29" type="math/tex; mode=display">\begin{align}
+\max\tilde{\gamma}=\frac{1}{\|w\|}
+\end{align}
+</script><script id="MathJax-Element-30" type="math/tex; mode=display">\begin{align}
+s.t. \quad y_i(w^{T}x_i+b)\geq1,\quad i=1,\ldots,n
+\end{align}</script> <br>
+优化所得的超平面不变，但是处理起来比较容易。 <br>
+<img src="http://blog.pluskid.org/wp-content/uploads/2010/09/Optimal-Hyper-Plane.png" alt="enter image description here" title="margin"> <br>
+中间的红线就是最优超平面，两边的两个平面到最优超平面的距离等于几何距离<script id="MathJax-Element-31" type="math/tex">\tilde{\gamma}</script>（这两个平面上的点就是支持向量）。</p>
+
+
+
+<h2 id="support-vector">Support Vector</h2>
+
+<p>到底什么是支持向量？前面这张图中，我们可以看到，超平面两边的平面上会有一些点（必定有点），我们把这些点称作支持向量（因为空间中的点可以看作从原点到这个点的向量） <br>
+支持向量<script id="MathJax-Element-32" type="math/tex">x</script>满足： <br>
+<script id="MathJax-Element-33" type="math/tex; mode=display">\begin{align}
+y(w^Tx+b)=1
+\end{align}</script> <br>
+对于非支持向量的点<script id="MathJax-Element-34" type="math/tex">x</script>, <script id="MathJax-Element-35" type="math/tex">y(w^Tx+b)>1</script>。支持向量个数一般只占样本点中的极小一部分（这一点对于预测很有益处）。 <br>
+我们的目标函数： <br>
+<script id="MathJax-Element-36" type="math/tex; mode=display">\begin{align}
+\max\frac{1}{\|w\|}
+\end{align}
+</script><script id="MathJax-Element-37" type="math/tex; mode=display">\begin{align}
+s.t. \quad y_i(w^{T}x_i+b)\geq1,\quad i=1,\ldots,n
+\end{align}</script> <br>
+目标函数不是一个凸函数，我们做一个等价的转换 <br>
+<script id="MathJax-Element-38" type="math/tex; mode=display">\begin{align}
+\min\frac{1}{2}\|w\|^2
+\end{align}
+</script><script id="MathJax-Element-39" type="math/tex; mode=display">\begin{align}
+s.t. \quad y_i(w^{T}x_i+b)\geq1,\quad i=1,\ldots,n
+\end{align}</script> <br>
+这样问题就变成了凸优化问题，准确的说是二次优化问题（目标函数为二次的，限制条件为线性的）可以用现成的QP(Qudratic Programming)包进行求解。</p>
+
+<ul>
+<li>拉格朗日对偶 <br>
+通过拉格朗日乘子，把限制条件加到目标函数中 <br>
+<script id="MathJax-Element-40" type="math/tex; mode=display">\begin{align}
+ \mathcal{L}(w,b,\alpha)=\frac{1}{2}\|w\|^2-\sum_{i=1}^n\alpha_i \left(y_i(w^Tx_i+b)-1\right)
+ \end{align}</script> <br>
+令 <br>
+<script id="MathJax-Element-41" type="math/tex; mode=display">\begin{align}
+  \theta(w)=\max_{\alpha_i\geq 0}\mathcal{L}(w,b,\alpha)
+ \end{align}</script> <br>
+这样，目标函数变成了 <br>
+<script id="MathJax-Element-42" type="math/tex; mode=display">\begin{align}
+  \min_{w,b}\theta(w)=\min\max_{\alpha_i\geq 0}\mathcal{L}(w,b,\alpha)=p^*
+   \end{align}</script> <br>
+这个问题不太好求解，因为一上来就要面对两个参数<script id="MathJax-Element-43" type="math/tex">w,b</script>，并且还有限制条件<script id="MathJax-Element-44" type="math/tex">\alpha_i\geq0</script>。交换<script id="MathJax-Element-45" type="math/tex">\min</script>和<script id="MathJax-Element-46" type="math/tex">\max</script>的位置，原问题变成 <br>
+<script id="MathJax-Element-47" type="math/tex; mode=display">\begin{align}
+  \max_{\alpha_i\geq 0}\min_{w,b}\mathcal{L}(w,b,\alpha)=d^*
+   \end{align}</script> <br>
+<script id="MathJax-Element-48" type="math/tex">p^*\geq d^*</script>，当满足 KKT条件时，二者相等。 <br>
+先让<script id="MathJax-Element-49" type="math/tex">\mathcal{L}</script>关于<script id="MathJax-Element-50" type="math/tex">w,b</script>最小化 <br>
+<script id="MathJax-Element-51" type="math/tex; mode=display">\begin{align} 
+\frac{\partial \mathcal{L}}{\partial w}=0 &\Rightarrow w=\sum_{i=1}^n \alpha_i y_i x_i \\ 
+\frac{\partial \mathcal{L}}{\partial b} = 0 &\Rightarrow \sum_{i=1}^n \alpha_i y_i = 0 
+\end{align}</script> <br>
+代回原式得</li>
+</ul>
+
+
+
+<p><script id="MathJax-Element-52" type="math/tex; mode=display">\begin{align} 
+\mathcal{L}(w,b,\alpha) &= \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_jx_i^Tx_j-\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_jx_i^Tx_j – b\sum_{i=1}^n\alpha_iy_i + \sum_{i=1}^n\alpha_i \\ 
+&= \sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_jx_i^Tx_j 
+\end{align}</script> <br>
+这样拉格朗日目标函数就只包含一类变量<script id="MathJax-Element-53" type="math/tex">\alpha_{i}</script>，如果我们求出了<script id="MathJax-Element-54" type="math/tex">\alpha_{i}</script>，则 <br>
+<script id="MathJax-Element-55" type="math/tex; mode=display">\begin{align} 
+w^*=\sum_{i=1}^n \alpha_i y_i x_i
+\end{align}</script> <br>
+<script id="MathJax-Element-56" type="math/tex; mode=display">\begin{align} 
+b^*=-\frac{max_{i:y^{(i)}=-1}w^{*T}x^{(i)}+min_{i:y^{(i)}=1}w^{*T}x^{(i)}}{2}
+\end{align}</script></p>
+
+
+
+<h2 id="kernel"> Kernel</h2>
+
+<p><img src="http://blog.pluskid.org/wp-content/uploads/2010/09/two_circles.png" alt="enter image description here" title="kernel"> <br>
+对于线性不可分的数据，通过引入核函数，将低维空间中线性不可分的数据映射到高维空间，在高维空间线性可分。 <br>
+对于如图所示的数据点，一个理想的分界面应该是一个“圆圈”，用<script id="MathJax-Element-57" type="math/tex">X_1</script>,<script id="MathJax-Element-58" type="math/tex">X_2</script>来表示二维空间的两个坐标，二次曲线的方程可以写作 <br>
+<script id="MathJax-Element-59" type="math/tex; mode=display">\begin{align}
+a_1X_1 + a_2X_1^2 + a_3 X_2 + a_4 X_2^2 + a_5 X_1X_2 + a_6 = 0
+\end{align}</script> <br>
+<script id="MathJax-Element-60" type="math/tex">\mathbb{R}^2\rightarrow\mathbb{R}^5:Z_1=X_1,Z_2={X_1}^2,Z_3={X_2},Z_4={X_2}^2,Z_5=X_1X_2</script> <br>
+<script id="MathJax-Element-61" type="math/tex; mode=display">\begin{align}
+\sum_{i=1}^5a_iZ_i + a_6 = 0
+\end{align}</script> <br>
+原来二维空间的点不能线性可分，映射到五维空间后就变得线性可分了。 <br>
+<img src="http://blog.pluskid.org/wp-content/uploads/2010/09/rotate.gif" alt="enter image description here" title="kernel"> <br>
+如果数据集线性不可分，找到一个映射函数<script id="MathJax-Element-62" type="math/tex">\phi(\cdot)</script>，原来优化问题变成 <br>
+<script id="MathJax-Element-63" type="math/tex; mode=display">\begin{align} 
+\max_\alpha &\sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_j\langle \phi(x_i),\phi(x_j)\rangle \\ 
+s.t., &\alpha_i\geq 0, i=1,\ldots,n \\ 
+&\sum_{i=1}^n\alpha_iy_i = 0 
+\end{align}</script> <br>
+映射函数<script id="MathJax-Element-64" type="math/tex">\phi(\cdot)</script>可以解决线性不可分的问题，但是带来空间维度爆炸问题，不能进行计算。 <br>
+引入核函数 <br>
+设两个向量 <script id="MathJax-Element-65" type="math/tex">x_1 = (\eta_1,\eta_2)^T</script>和 <script id="MathJax-Element-66" type="math/tex">x_2=(\xi_1,\xi_2)^T</script> ，而 <script id="MathJax-Element-67" type="math/tex">\phi(\cdot)</script> 即是到前面说的五维空间的映射，因此映射过后的内积为： <br>
+<script id="MathJax-Element-68" type="math/tex; mode=display">\begin{align}
+\langle \phi(x_1),\phi(x_2)\rangle = \eta_1\xi_1 + \eta_1^2\xi_1^2 + \eta_2\xi_2 + \eta_2^2\xi_2^2+\eta_1\eta_2\xi_1\xi_2
+\end{align}</script> <br>
+注意到： <br>
+<script id="MathJax-Element-69" type="math/tex; mode=display">\begin{align}
+\left(\langle x_1, x_2\rangle + 1\right)^2 = 2\eta_1\xi_1 + \eta_1^2\xi_1^2 + 2\eta_2\xi_2 + \eta_2^2\xi_2^2 + 2\eta_1\eta_2\xi_1\xi_2 + 1
+\end{align}</script> <br>
+两个式子很像，如果 <br>
+<script id="MathJax-Element-70" type="math/tex; mode=display">\begin{align}
+\varphi(X_1,X_2)=(\sqrt{2}X_1,X_1^2,\sqrt{2}X_2,X_2^2,\sqrt{2}X_1X_2,1)^T
+\end{align}</script> <br>
+<script id="MathJax-Element-71" type="math/tex">\langle \varphi(x_1),\varphi(x_2)\rangle</script>内积结果和上面一样。但是上面的是在低维空间中进行计算，而<script id="MathJax-Element-72" type="math/tex">\langle \varphi(x_1),\varphi(x_2)\rangle</script>是在高维空间中计算的。在这个例子中 <br>
+<script id="MathJax-Element-73" type="math/tex; mode=display">\begin{align}
+\kappa(x_1,x_2)=\left(\langle x_1, x_2\rangle + 1\right)^2
+\end{align}</script> <br>
+引入kernel函数，原问题变成 <br>
+<script id="MathJax-Element-74" type="math/tex; mode=display">\begin{align} 
+\max_\alpha &\sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_j \color{red}{\kappa(x_i, x_j)} \\ 
+s.t., &\alpha_i\geq 0, i=1,\ldots,n \\ 
+&\sum_{i=1}^n\alpha_iy_i = 0 
+\end{align}</script> <br>
+这样就避免了在高维空间中进行计算了。</p>
+
+<blockquote>
+  <p><strong>核函数选:</strong></p>
+  
+  <ul>
+  <li>多项式核 <script id="MathJax-Element-75" type="math/tex">\kappa(x_1,x_2) = \left(\langle x_1,x_2\rangle + R\right)^d</script>，该空间的维度为<script id="MathJax-Element-76" type="math/tex">\binom{m+d}{d}</script></li>
+  <li>高斯核<script id="MathJax-Element-77" type="math/tex">\kappa(x_1,x_2) = \exp\left(-\frac{\|x_1-x_2\|^2}{2\sigma^2}\right)</script></li>
+  <li>线性核<script id="MathJax-Element-78" type="math/tex">\kappa(x_1,x_2) = \langle x_1,x_2\rangle</script></li>
+  </ul>
+</blockquote>
+
+
+
+<h2 id="deal-with-outliers">Deal with Outliers</h2>
+
+<p>有时，数据不能进行线性分割并不是因为数据本身非线性的结构，而是由于有离群点。由于SVM 的支持向量个数很少，这些离群点的存在带来的影响会很大。 <br>
+ <img src="http://blog.pluskid.org/wp-content/uploads/2010/09/Optimal-Hyper-Plane-2.png" alt="enter image description here" title="outlier"> <br>
+为了处理这个问题，SVM允许数据点在一定程度上偏离超平面，引入松弛变量<script id="MathJax-Element-79" type="math/tex">\xi_i\geq 0</script>，原来的约束条件变成 <br>
+<script id="MathJax-Element-80" type="math/tex; mode=display">\begin{align}
+y_i(w^Tx_i+b)\geq 1\color{red}{-\xi_i}, \quad i=1,\ldots,n
+\end{align}</script> <br>
+松弛变量<script id="MathJax-Element-81" type="math/tex">\xi_i</script>不能任意大，否则任意超平面都符合条件了。在原来的目标函数后面加上一项，使得这些<script id="MathJax-Element-82" type="math/tex">\xi_i</script>也要最小： <br>
+<script id="MathJax-Element-83" type="math/tex; mode=display">\begin{align} 
+\min & \frac{1}{2}\|w\|^2 + C\sum_{i=1}^n\xi_i \\ 
+s.t.\quad & y_i(w^Tx_i+b)\geq 1-\xi_i, \quad i=1,\ldots,n \\ 
+& \xi_i \geq 0,\quad i=1,\ldots,n 
+\end{align}</script> <br>
+用之前的方法将限制加入到目标函数中，得到如下问题： <br>
+<script id="MathJax-Element-84" type="math/tex; mode=display">\begin{align}
+\mathcal{L}(w,b,\xi,\alpha,r)=\frac{1}{2}\|w\|^2 + C\sum_{i=1}^n\xi_i – \sum_{i=1}^n\alpha_i \left(y_i(w^Tx_i+b)-1+\xi_i\right) – \sum_{i=1}^n r_i\xi_i
+\end{align}</script> <br>
+让<script id="MathJax-Element-85" type="math/tex">\mathcal{L}</script>针对<script id="MathJax-Element-86" type="math/tex">w,b,\xi</script>极小化 <br>
+<script id="MathJax-Element-87" type="math/tex; mode=display">\begin{align} 
+\frac{\partial \mathcal{L}}{\partial w}=0 &\Rightarrow w=\sum_{i=1}^n \alpha_i y_i x_i \\ 
+\frac{\partial \mathcal{L}}{\partial b} = 0 &\Rightarrow \sum_{i=1}^n \alpha_i y_i = 0 \\ 
+\frac{\partial \mathcal{L}}{\partial \xi_i} = 0 &\Rightarrow C-\alpha_i-r_i=0, \quad i=1,\ldots,n 
+\end{align}</script> <br>
+回代<script id="MathJax-Element-88" type="math/tex">\mathcal{L}</script>，整个问题现在变成： <br>
+<script id="MathJax-Element-89" type="math/tex; mode=display">\begin{align} 
+\max_\alpha &\sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_j\langle x_i,x_j\rangle \\ 
+s.t., &0\leq \alpha_i\leq C, i=1,\ldots,n \\ 
+&\sum_{i=1}^n\alpha_iy_i = 0 
+\end{align}</script> <br>
+和原来的问题唯一的区别是<script id="MathJax-Element-90" type="math/tex">\alpha</script>多了一个上限<script id="MathJax-Element-91" type="math/tex">C</script>。如果应用kernel <br>
+<script id="MathJax-Element-92" type="math/tex; mode=display">\begin{align} 
+\max_\alpha &\sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_j\kappa(x_i, x_j) \\ 
+s.t., &0\leq \alpha_i\leq C, i=1,\ldots,n \\ 
+&\sum_{i=1}^n\alpha_iy_i = 0 
+\end{align}</script></p>
+
+
+
+<h2 id="smo">SMO</h2>
+
+<p><script id="MathJax-Element-93" type="math/tex; mode=display">\begin{align} 
+\max_\alpha\quad &W(\alpha)=\sum_{i=1}^n\alpha_i – \frac{1}{2}\sum_{i,j=1}^n\alpha_i\alpha_jy_iy_j\kappa(x_i, x_j) \\ 
+s.t., &0\leq \alpha_i\leq C, i=1,\ldots,n \\ 
+&\sum_{i=1}^n\alpha_iy_i = 0 
+\end{align}</script> <br>
+与之对应的KKT条件 <br>
+<script id="MathJax-Element-94" type="math/tex; mode=display">\begin{align}
+\alpha_i=0\Leftrightarrow y_iu_i\geq 1, \\
+0 \lt \alpha_i \lt C \Leftrightarrow y_iu_i= 1,\\
+\alpha_i=C \Leftrightarrow y_iu_i leq 1.
+\end{align}</script> <br>
+为了高效地解决这个二次优化问题，Microsoft Research的John C. Platt在1998年提出SMO(Sequential minimal optimization)算法。</p>
+
+<blockquote>
+  <p>标准的QP方法解决上面的二次优化问题需要处理样本点的平方这么大的矩阵。</p>
+</blockquote>
+
+<p>SMO算法主要的步骤： <br>
+Repeat till convergence { <br>
+ - Select some pair <script id="MathJax-Element-95" type="math/tex">\alpha_i,\alpha_j</script> to update next (using a heuristic that tries to pick the two that will allow us to make the biggest progress towards to the global maximum). <br>
+ - Reoptimize the <script id="MathJax-Element-96" type="math/tex">W(\alpha)</script> with respect to <script id="MathJax-Element-97" type="math/tex">\alpha_i</script> and <script id="MathJax-Element-98" type="math/tex">\alpha_j</script>, while holding all the other <script id="MathJax-Element-99" type="math/tex">\alpha_{k}^{'}s\quad(k!＝j)</script> <br>
+}</p>
+
+<ul>
+<li><p>优化一对算子 <br>
+假设我们选取了满足约束条件的初始参数<script id="MathJax-Element-100" type="math/tex">\{\alpha_1,\alpha_2,...,\alpha_n\}</script>, 现在固定<script id="MathJax-Element-101" type="math/tex">\{\alpha_3,\dots,\alpha_n\}</script>,  原目标函数变成只关于<script id="MathJax-Element-102" type="math/tex">\alpha_1,\alpha_2</script>的函数了，由原第二个约束条件 <br>
+<script id="MathJax-Element-103" type="math/tex; mode=display">\begin{align}
+\alpha_1y^{(1)}+\alpha_2y^{(2)}=-\sum_{i=3}^n{\alpha_iy^{(i)}}
+\end{align}</script> <br>
+令<script id="MathJax-Element-104" type="math/tex">\xi=-\sum_{i=3}^n{\alpha_iy^{(i)}}</script> <br>
+<script id="MathJax-Element-105" type="math/tex; mode=display">\begin{align}
+\alpha_1y^{(1)}+\alpha_2y^{(2)}=\xi
+\end{align}</script> <br>
+我们先求解<script id="MathJax-Element-106" type="math/tex">\alpha_2</script>，先确定其取值范围 <br>
+<script id="MathJax-Element-107" type="math/tex; mode=display">\begin{align}
+L\leq\alpha_2^{new}\leq H
+\end{align}</script> <br>
+<script id="MathJax-Element-108" type="math/tex">y^{(1)}</script>和<script id="MathJax-Element-109" type="math/tex">y^{(2)}</script>异号时 <br>
+<img src="http://images.cnblogs.com/cnblogs_com/jerrylead/201103/20110318204311764.png" alt="enter image description\ here" title=""></p>
+
+<p><script id="MathJax-Element-110" type="math/tex">\alpha_1</script>, <script id="MathJax-Element-111" type="math/tex">\alpha_2</script>既要在矩形框中，也要在直线上 <br>
+<script id="MathJax-Element-112" type="math/tex">L=max(0, \alpha_2-\alpha_1)\quad H=min(C, C+\alpha_2-\alpha_1)</script> <br>
+同理，<script id="MathJax-Element-113" type="math/tex">y^{(1)}</script>和<script id="MathJax-Element-114" type="math/tex">y^{(2)}</script>同号时 <br>
+<script id="MathJax-Element-115" type="math/tex">L=max(0, \alpha_2+\alpha_1-C)\quad H=min(C, \alpha_2+\alpha_1)</script> <br>
+这样就求出了<script id="MathJax-Element-116" type="math/tex">\alpha_2^{new}</script>的取值范围。 <br>
+用<script id="MathJax-Element-117" type="math/tex">\alpha_2</script>表示<script id="MathJax-Element-118" type="math/tex">\alpha_1</script> <br>
+<script id="MathJax-Element-119" type="math/tex">\alpha_1=(\xi-\alpha_2y^{(2)})y^{(1)}</script>. <br>
+然后代入W中，得到一个 <br>
+<script id="MathJax-Element-120" type="math/tex">W((\xi-\alpha_2y^{(2)})y^{(1)},\alpha_2,...,\alpha_n)</script> <br>
+展开得到一个二次型<script id="MathJax-Element-121" type="math/tex">a\alpha_2^2+b\alpha_2+c</script>, 令 <br>
+<script id="MathJax-Element-122" type="math/tex; mode=display">\begin{align}
+\frac{dW}{d\alpha_2} = 0
+\end{align}</script> <br>
+求的<script id="MathJax-Element-123" type="math/tex">\alpha_2^{new,uncliped}</script>, <script id="MathJax-Element-124" type="math/tex">\alpha_2^{new}</script>还要满足L, H约束条件。 <br>
+<script id="MathJax-Element-125" type="math/tex; mode=display">\begin{align}
+\alpha_2^{new,uncliped}=\alpha_2^{old}+\frac{y^{(2)}(E_1-E_2)}{\eta}\\
+\eta=K(x_1, x_1)+K(x_2,x_2)-2K(x_1,x_2)\\
+\end{align}</script> <br>
+<script id="MathJax-Element-126" type="math/tex">E_i</script>表示预测值与真实值的差。</p></li>
+</ul>
+
+
+
+<p><script id="MathJax-Element-127" type="math/tex; mode=display">a_2^{new}=\left\{
+\begin{array}{rcl}
+H & & a_2^{new,ucliped}\gt H\\
+a_2^{new,ucliped} & & L\leq a_2^{new,ucliped}\leq H\\
+L & & a_2^{new,ucliped}\lt L
+\end{array} \right.</script> <br>
+求得<script id="MathJax-Element-128" type="math/tex">a_2^{new}</script>，进而可以求得<script id="MathJax-Element-129" type="math/tex">a_1^{new}</script>, 更新b <br>
+<script id="MathJax-Element-130" type="math/tex; mode=display">b=\left\{
+\begin{array}{rcl}
+b_1 & & 0\lt \alpha_1^{new}\lt C\\
+b_2& & 0\lt a_2^{new}\lt C\\
+(b_1+b_2)/2 & & otherwise
+\end{array} \right.</script> <br>
+<script id="MathJax-Element-131" type="math/tex; mode=display">\begin{align}
+b_1^{new}=b^{old}-E_1-y_1(a_1^{new}-a_2^{old})k(x_1,x_1)-y_2(a_2^{new}-a_2^{old})k(x_1,x_2)\\
+b_2^{new}=b^{old}-E_2-y_1(a_1^{new}-a_2^{old})k(x_1,x_1)-y_2(a_2^{new}-a_2^{old})k(x_1,x_2)
+\end{align}</script> <br>
+这样<script id="MathJax-Element-132" type="math/tex">\alpha_1,\alpha_2,b</script>都更新了。</p>
+
+<ul>
+<li>用启发式的方法选择一对算子 <br>
+根据 Osuna定律，只要选择出来的两个乘子中有一个违背了KKT条件，那么目标函数在一步迭代后值会减小。这样就确保目标函数的收敛。 <br>
+选择第一个算子<script id="MathJax-Element-133" type="math/tex">\alpha_1</script>：查找不满足KKT条件的<script id="MathJax-Element-134" type="math/tex">\alpha_i</script> <br>
+选择第二个算子<script id="MathJax-Element-135" type="math/tex">\alpha_2</script>：<script id="MathJax-Element-136" type="math/tex">\max|E_1-E_2|</script></li>
+</ul></div></body>
+</html>
